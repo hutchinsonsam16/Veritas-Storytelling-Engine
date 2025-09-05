@@ -135,7 +135,6 @@ const ResizablePanelGroup = ({
 ResizablePanelGroup.displayName = "ResizablePanelGroup";
 
 const ResizablePanel = ({ children, className, defaultSize, isCollapsed, size, ...props }: { defaultSize?: number; minSize?: number; collapsible?: boolean; collapsedSize?: number; isCollapsed?: boolean; children: React.ReactNode; className?: string; size?: number; }) => {
-<<<<<<< HEAD
     const { direction } = useResizablePanelGroup();
     return (
         <div
@@ -154,20 +153,6 @@ const ResizablePanel = ({ children, className, defaultSize, isCollapsed, size, .
             {...props}
         >
             {!isCollapsed && children}
-=======
-    return (
-        <div 
-            className={cn("overflow-hidden", className)} 
-            style={{
-                flexGrow: size,
-                flexShrink: 1,
-                flexBasis: '0%',
-                display: isCollapsed ? 'none' : 'block'
-            }}
-            {...props}
-        >
-            {children}
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
         </div>
     );
 };
@@ -179,13 +164,8 @@ const ResizableHandle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
         <div
             ref={ref}
             className={cn(
-<<<<<<< HEAD
                 "flex-shrink-0 bg-border relative transition-colors",
                 direction === 'horizontal' ? 'w-2 cursor-col-resize hover:bg-primary/20' : 'h-2 cursor-row-resize hover:bg-primary/20',
-=======
-                "flex-shrink-0 bg-border relative",
-                direction === 'horizontal' ? 'w-2 cursor-col-resize' : 'h-2 cursor-row-resize',
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
                 "flex items-center justify-center",
                 className
             )}
@@ -199,8 +179,4 @@ const ResizableHandle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
 });
 ResizableHandle.displayName = "ResizableHandle";
 
-<<<<<<< HEAD
 export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
-=======
-export { ResizablePanelGroup, ResizablePanel, ResizableHandle };
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c

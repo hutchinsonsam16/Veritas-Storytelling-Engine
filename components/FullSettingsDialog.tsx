@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import React, { useRef, useState, DragEvent } from 'react';
-=======
-import React, { useRef } from 'react';
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
 import { useStore } from '../store';
 import { ImageGenerationMode, Settings, TextEngine, ImageEngine, Theme, PanelId, ComponentVisibility } from '../types';
 import { SaveIcon, UploadIcon, DownloadIcon, RefreshIcon } from './Icons';
@@ -23,10 +19,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Switch } from './ui/switch';
 import { themes } from '../lib/themes';
-<<<<<<< HEAD
-=======
-// FIX: Added missing import for Tabs components.
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 const EngineButton = ({ active, onClick, children }: { active: boolean, onClick: () => void, children: React.ReactNode }) => (
@@ -35,7 +27,6 @@ const EngineButton = ({ active, onClick, children }: { active: boolean, onClick:
     </Button>
 );
 
-<<<<<<< HEAD
 const PanelOrderManager = ({ order, onOrderChange }: { order: PanelId[], onOrderChange: (order: PanelId[]) => void }) => {
     const [draggedItem, setDraggedItem] = useState<PanelId | null>(null);
 
@@ -75,31 +66,6 @@ const PanelOrderManager = ({ order, onOrderChange }: { order: PanelId[], onOrder
                     className="flex-1 p-4 text-center bg-background rounded cursor-move border border-border"
                 >
                     {panelId.charAt(0).toUpperCase() + panelId.slice(1)}
-=======
-const PanelOrderSelector = ({ order, onOrderChange }: { order: PanelId[], onOrderChange: (order: PanelId[]) => void }) => {
-    const handleSelect = (index: number, value: PanelId) => {
-        const newOrder = [...order];
-        const oldIndex = newOrder.indexOf(value);
-        [newOrder[index], newOrder[oldIndex]] = [newOrder[oldIndex], newOrder[index]]; // Swap
-        onOrderChange(newOrder);
-    };
-
-    return (
-        <div className="flex gap-2">
-            {order.map((panelId, index) => (
-                <div key={index} className="flex-1">
-                    <Label className="text-xs">{`Slot ${index + 1}`}</Label>
-                    <Select value={panelId} onValueChange={(value) => handleSelect(index, value as PanelId)}>
-                        <SelectTrigger>
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="character">Character</SelectItem>
-                            <SelectItem value="narrative">Narrative</SelectItem>
-                            <SelectItem value="context">Context</SelectItem>
-                        </SelectContent>
-                    </Select>
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
                 </div>
             ))}
         </div>
@@ -229,11 +195,7 @@ export const FullSettingsDialog: React.FC = () => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {Object.keys(themes).map(themeKey => (
-<<<<<<< HEAD
                                             <SelectItem key={themeKey} value={themeKey}>{themeKey.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</SelectItem>
-=======
-                                            <SelectItem key={themeKey} value={themeKey}>{themeKey.charAt(0).toUpperCase() + themeKey.slice(1)}</SelectItem>
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -266,13 +228,8 @@ export const FullSettingsDialog: React.FC = () => {
 
                         <TabsContent value="layout" className="mt-4 space-y-4">
                             <div>
-<<<<<<< HEAD
                                 <Label className="font-semibold mb-2 block">Panel Order (Drag to Reorder)</Label>
                                 <PanelOrderManager order={settings.layout.order} onOrderChange={(order) => updateSettings({ layout: {...settings.layout, order} })}/>
-=======
-                                <Label className="font-semibold mb-2 block">Panel Order</Label>
-                                <PanelOrderSelector order={settings.layout.order} onOrderChange={(order) => updateSettings({ layout: {...settings.layout, order} })}/>
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
                             </div>
                              <div>
                                 <Label className="font-semibold mb-2 block">Character Panel Components</Label>
@@ -289,11 +246,7 @@ export const FullSettingsDialog: React.FC = () => {
 
                         <TabsContent value="accessibility" className="mt-4 space-y-4">
                             <div>
-<<<<<<< HEAD
                                 <Label htmlFor="font-scale" className="font-semibold mb-2 block">Font Size ({Math.round(settings.fontScale * 100)}%)</Label>
-=======
-                                <Label htmlFor="font-scale" className="font-semibold mb-2 block">Font Size ({settings.fontScale * 100}%)</Label>
->>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
                                 <input
                                     type="range"
                                     id="font-scale"
