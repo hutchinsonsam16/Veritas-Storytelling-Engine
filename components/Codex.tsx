@@ -1,9 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { BookOpenIcon, ClockIcon, UsersIcon } from './Icons';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { BookOpenIcon, ClockIcon, UsersIcon, PhotographIcon } from './Icons';
 import { Loader } from './Loader';
 import { useStore } from '../store';
+import { NPC } from '../types';
 
-type CodexTab = 'narrative' | 'timeline' | 'relationships';
+type CodexTab = 'narrative' | 'timeline' | 'relationships' | 'media';
 
 
 const TabButton = ({ isActive, onClick, children }: { isActive: boolean; onClick: () => void; children: React.ReactNode }) => (
@@ -17,6 +18,67 @@ const TabButton = ({ isActive, onClick, children }: { isActive: boolean; onClick
     </button>
   );
 
+const RelationshipWeb = () => {
+    const { character, world } = useStore(state => ({ character: state.character, world: state.world }));
+    const npcs = world.npcs;
+    
+    if (npcs.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center">
+                <UsersIcon className="w-24 h-24 mx-auto text-slate-600" />
+                <p className="text-gray-500 mt-4">No NPCs have been encountered yet.</p>
+            </div>
+        )
+    }
+
+    const width = 500;
+    const height = 300;
+    const center = { x: width / 2, y: height / 2 };
+    const radius = Math.min(width, height) / 3;
+
+    const getLineStyle = (relationship: number) => {
+        const magnitude = Math.abs(relationship);
+        const thickness = Math.max(1, (magnitude / 100) * 5);
+        let color = '#6b7280'; // gray-500 for neutral
+        if (relationship > 10) color = '#10b981'; // green-500 for positive
+        if (relationship < -10) color = '#ef4444'; // red-500 for negative
+        return { stroke: color, strokeWidth: thickness };
+    };
+
+    const npcNodes = npcs.map((npc, index) => {
+        const angle = (index / npcs.length) * 2 * Math.PI;
+        return {
+            ...npc,
+            x: center.x + radius * Math.cos(angle),
+            y: center.y + radius * Math.sin(angle),
+        };
+    });
+
+    return (
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto max-w-2xl mx-auto">
+            {/* Player Node (Center) */}
+            <circle cx={center.x} cy={center.y} r="20" fill="#0891b2" />
+            <text x={center.x} y={center.y + 35} textAnchor="middle" fill="#f1f5f9" fontSize="12" fontWeight="bold">
+                {character.name}
+            </text>
+
+            {/* NPC Nodes and Lines */}
+            {npcNodes.map(npc => (
+                <g key={npc.id}>
+                    <line x1={center.x} y1={center.y} x2={npc.x} y2={npc.y} {...getLineStyle(npc.relationship)} />
+                    <circle cx={npc.x} cy={npc.y} r="15" fill="#1e293b" stroke="#475569" strokeWidth="2" />
+                    <text x={npc.x} y={npc.y + 28} textAnchor="middle" fill="#cbd5e1" fontSize="10">
+                        {npc.name}
+                    </text>
+                     <text x={npc.x} y={npc.y + 40} textAnchor="middle" fill={getLineStyle(npc.relationship).stroke} fontSize="10" fontWeight="bold">
+                        ({npc.relationship})
+                    </text>
+                </g>
+            ))}
+        </svg>
+    );
+};
+
 export const Codex = () => {
   const gameState = useStore(state => state.gameState);
   const onPlayerAction = useStore(state => state.handlePlayerAction);
@@ -24,6 +86,8 @@ export const Codex = () => {
   const [activeTab, setActiveTab] = useState<CodexTab>('narrative');
   const [playerInput, setPlayerInput] = useState('');
   const storyEndRef = useRef<HTMLDivElement>(null);
+  
+  const sceneImages = useMemo(() => gameState.storyLog.filter(entry => entry.imageUrl).map(entry => entry.imageUrl as string), [gameState.storyLog]);
 
   useEffect(() => {
     storyEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,14 +130,31 @@ export const Codex = () => {
         </div>
     );
     
-    // Placeholder for relationship web
     const renderRelationships = () => (
-         <div className="flex-grow overflow-y-auto p-4 md:p-6 text-center">
-            <h2 className="text-2xl font-bold text-cyan-300 mb-6">Relationship Web</h2>
-            <UsersIcon className="w-24 h-24 mx-auto text-slate-600" />
-            <p className="text-gray-500 mt-4">This feature is under development. It will visually map your character's relationships with NPCs and factions.</p>
+         <div className="flex-grow flex flex-col overflow-y-auto p-4 md:p-6">
+            <h2 className="text-2xl font-bold text-cyan-300 mb-6 text-center">Relationship Web</h2>
+            <div className="flex-grow flex items-center justify-center">
+                <RelationshipWeb />
+            </div>
         </div>
     );
+
+  const renderMediaGallery = () => (
+    <div className="flex-grow overflow-y-auto p-4 md:p-6">
+      <h2 className="text-2xl font-bold text-cyan-300 mb-6">Scene Media Gallery</h2>
+      {sceneImages.length > 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {sceneImages.map((url, index) => (
+            <div key={index} className="aspect-w-4 aspect-h-3">
+              <img src={url} alt={`Scene ${index + 1}`} className="rounded-lg object-cover w-full h-full shadow-lg"/>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-gray-500">No scene images have been generated yet.</p>
+      )}
+    </div>
+  );
 
 
   const renderContent = () => {
@@ -84,6 +165,8 @@ export const Codex = () => {
         return renderTimeline();
       case 'relationships':
         return renderRelationships();
+      case 'media':
+        return renderMediaGallery();
     }
   };
   
@@ -94,6 +177,11 @@ export const Codex = () => {
                 <TabButton isActive={activeTab === 'narrative'} onClick={() => setActiveTab('narrative')}>
                     <BookOpenIcon className="w-5 h-5"/><span>Narrative</span>
                 </TabButton>
+                {sceneImages.length > 0 && (
+                  <TabButton isActive={activeTab === 'media'} onClick={() => setActiveTab('media')}>
+                      <PhotographIcon className="w-5 h-5"/><span>Media</span>
+                  </TabButton>
+                )}
                 <TabButton isActive={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')}>
                     <ClockIcon className="w-5 h-5"/><span>Timeline</span>
                 </TabButton>

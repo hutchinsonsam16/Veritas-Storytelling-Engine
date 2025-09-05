@@ -1,20 +1,21 @@
 import React, { useRef } from 'react';
 import { useStore } from '../store';
 import { ImageGenerationMode, Settings } from '../types';
-import { SaveIcon, UploadIcon, DownloadIcon } from './Icons';
+import { SaveIcon, UploadIcon, DownloadIcon, RefreshIcon } from './Icons';
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
-  const { settings, updateSettings, saveGame, loadGame, exportGame, gameState } = useStore(state => ({
+  const { settings, updateSettings, saveGame, loadGame, exportGame, gameState, restartGame } = useStore(state => ({
     settings: state.settings,
     updateSettings: state.updateSettings,
     saveGame: state.saveGame,
     loadGame: state.loadGame,
     exportGame: state.exportGame,
     gameState: state.gameState,
+    restartGame: state.restartGame,
   }));
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,6 +43,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
         }
       };
       reader.readAsText(file);
+    }
+  };
+
+  const handleRestart = () => {
+    if (window.confirm("Are you sure you want to restart? All unsaved progress will be lost.")) {
+      restartGame();
+      onClose();
     }
   };
 
@@ -101,6 +109,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
                 <span>Export Saga</span>
                </button>
             </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="border-t border-red-500/30 pt-4">
+             <h3 className="font-semibold mb-3 text-red-400">Danger Zone</h3>
+              <button onClick={handleRestart} disabled={gameState.isLoading} className="w-full flex items-center justify-center gap-2 p-3 bg-red-600 hover:bg-red-500 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed">
+                  <RefreshIcon className="w-5 h-5"/>
+                  <span>Restart Game</span>
+              </button>
+              <p className="text-xs text-gray-400 mt-2 text-center">This will end the current game and return you to the main screen. Unsaved progress will be lost.</p>
           </div>
 
         </div>

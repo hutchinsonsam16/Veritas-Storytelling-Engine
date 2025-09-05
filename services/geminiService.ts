@@ -67,7 +67,7 @@ export async function getAIDrivenTurn(
   }
 }
 
-export async function generateImage(prompt: string, theme: string): Promise<string | null> {
+export async function generateImage(prompt: string, theme: string, aspectRatio: '1:1' | '3:4' | '4:3' | '9:16' | '16:9' = '4:3'): Promise<string | null> {
   try {
     const response = await ai.models.generateImages({
         model: generateImageModel,
@@ -75,7 +75,7 @@ export async function generateImage(prompt: string, theme: string): Promise<stri
         config: {
           numberOfImages: 1,
           outputMimeType: 'image/jpeg',
-          aspectRatio: '16:9',
+          aspectRatio: aspectRatio,
         },
     });
     

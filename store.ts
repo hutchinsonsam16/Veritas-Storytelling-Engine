@@ -28,6 +28,7 @@ interface AppState {
   saveGame: () => void;
   loadGame: (json: string) => void;
   exportGame: () => Promise<void>;
+  restartGame: () => void;
 }
 
 const parseAndApplyTags = async (
@@ -53,13 +54,13 @@ const parseAndApplyTags = async (
         case 'img-prompt':
           if (settings.imageGenerationMode === 'scene' || settings.imageGenerationMode === 'both') {
             set(state => ({ imagePrompts: [...state.imagePrompts, content] }));
-            imagePromise = generateImage(content, settings.imageTheme);
+            imagePromise = generateImage(content, settings.imageTheme, '4:3');
           }
           break;
         case 'char-img-prompt':
           if (settings.imageGenerationMode === 'character' || settings.imageGenerationMode === 'both') {
             set(state => ({ imagePrompts: [...state.imagePrompts, content] }));
-            charImagePromise = generateImage(content, settings.imageTheme);
+            charImagePromise = generateImage(content, settings.imageTheme, '3:4');
           }
           break;
         case 'update-status':
@@ -139,23 +140,27 @@ const parseAndApplyTags = async (
       }
     }
 
-    // Automatically generate a character image on state change if one wasn't explicitly provided.
     if (characterStateChanged && !charImagePromise && (settings.imageGenerationMode === 'character' || settings.imageGenerationMode === 'both')) {
       const updatedCharacter = get().character;
-      // Construct a detailed prompt for the new image
       const skillsString = updatedCharacter.skills.map(s => s.name).join(', ') || 'no defined skills';
       const inventoryString = updatedCharacter.inventory.map(i => i.name).join(', ') || 'nothing';
       const autoPrompt = `A portrait of ${updatedCharacter.name}. Backstory: ${updatedCharacter.backstory}. They are skilled in ${skillsString}. They are currently carrying: ${inventoryString}.`;
       
       set(state => ({ imagePrompts: [...state.imagePrompts, autoPrompt] }));
-      charImagePromise = generateImage(autoPrompt, settings.imageTheme);
+      charImagePromise = generateImage(autoPrompt, settings.imageTheme, '3:4');
     }
     
     const imageUrl = await imagePromise;
     const charImageUrl = await charImagePromise;
 
     if (charImageUrl) {
-        set(state => ({ character: { ...state.character, imageUrl: charImageUrl } }));
+        set(state => {
+            const history = [...(state.character.imageUrlHistory || [])];
+            if (state.character.imageUrl) {
+                history.unshift(state.character.imageUrl); // Add previous image to start of history
+            }
+            return { character: { ...state.character, imageUrl: charImageUrl, imageUrlHistory: history } };
+        });
     }
 
     const newNarrativeEntry: StoryEntry = {
@@ -180,6 +185,37 @@ const parseAndApplyTags = async (
 
 const SAVABLE_STATE_KEYS: (keyof AppState)[] = ['character', 'world', 'gameState', 'settings', 'imagePrompts'];
 
+/**
+ * Migrates a loaded save state to the latest data structure, ensuring backward compatibility.
+ */
+function migrateSaveState(loadedState: any): Partial<AppState> {
+    const character = { ...INITIAL_CHARACTER_STATE, ...loadedState.character };
+    if (!character.imageUrlHistory) {
+        character.imageUrlHistory = [];
+    }
+
+    const world = { ...INITIAL_WORLD_STATE, ...loadedState.world };
+    if (world.npcs) {
+        world.npcs = world.npcs.map((npc: any) => ({
+            relationship: 0, // Ensure relationship exists
+            ...npc,
+        }));
+    }
+
+    const gameState = { 
+        ...INITIAL_GAME_STATE, 
+        ...loadedState.gameState, 
+        phase: GamePhase.PLAYING, 
+        isLoading: false 
+    };
+    
+    const settings = { ...INITIAL_SETTINGS_STATE, ...loadedState.settings };
+    const imagePrompts = loadedState.imagePrompts || [];
+
+    return { character, world, gameState, settings, imagePrompts };
+}
+
+
 export const useStore = create<AppState>((set, get) => ({
   character: INITIAL_CHARACTER_STATE,
   world: INITIAL_WORLD_STATE,
@@ -189,7 +225,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   handleOnboardingComplete: (initialCharacter, initialWorld, openingPrompt) => {
     set({
-      character: initialCharacter,
+      character: { ...INITIAL_CHARACTER_STATE, ...initialCharacter},
       world: initialWorld,
       gameState: { ...get().gameState, phase: GamePhase.PLAYING }
     });
@@ -221,9 +257,6 @@ export const useStore = create<AppState>((set, get) => ({
   saveGame: () => {
     const state = get();
     const stateToSave: Partial<AppState> = {};
-    // FIX: The original `reduce` caused a TypeScript error due to difficulty in correlating
-    // the key with its corresponding value type in a generic way. Using `forEach` and a cast
-    // to `any` resolves this complex type issue while achieving the same result.
     SAVABLE_STATE_KEYS.forEach(key => {
         (stateToSave as any)[key] = state[key];
     });
@@ -234,20 +267,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   loadGame: (json) => {
-    const loadedState = JSON.parse(json);
-    set({
-      ...INITIAL_GAME_STATE, // ensure all fields are present
-      ...INITIAL_CHARACTER_STATE,
-      ...INITIAL_WORLD_STATE,
-      ...INITIAL_SETTINGS_STATE,
-      ...loadedState,
-      gameState: {
-        ...INITIAL_GAME_STATE,
-        ...loadedState.gameState,
-        phase: GamePhase.PLAYING,
-        isLoading: false,
-      }
-    });
+    try {
+        const loadedState = JSON.parse(json);
+        set(migrateSaveState(loadedState));
+    } catch(e) {
+        console.error("Failed to load save file:", e);
+        alert("Could not load save file. It may be corrupt.");
+    }
   },
 
   exportGame: async () => {
@@ -258,9 +284,6 @@ export const useStore = create<AppState>((set, get) => ({
     // 1. Add save.json
     const state = get();
     const stateToSave: Partial<AppState> = {};
-    // FIX: The original `reduce` caused a TypeScript error due to difficulty in correlating
-    // the key with its corresponding value type in a generic way. Using `forEach` and a cast
-    // to `any` resolves this complex type issue while achieving the same result.
     SAVABLE_STATE_KEYS.forEach(key => {
         (stateToSave as any)[key] = state[key];
     });
@@ -272,15 +295,22 @@ export const useStore = create<AppState>((set, get) => ({
     // 3. Add images
     const imagesFolder = zip.folder('images');
     if(imagesFolder) {
-        let imageCounter = 0;
+        let sceneCounter = 0;
+        // Current character image
         if (character.imageUrl) {
             const base64Data = character.imageUrl.split(',')[1];
-            imagesFolder.file('character.jpg', base64Data, { base64: true });
+            imagesFolder.file('character_current.jpg', base64Data, { base64: true });
         }
+        // Character history images
+        (character.imageUrlHistory || []).forEach((url, index) => {
+            const base64Data = url.split(',')[1];
+            imagesFolder.file(`character_history_${index}.jpg`, base64Data, { base64: true });
+        });
+        // Scene images
         for (const entry of gameState.storyLog) {
             if (entry.imageUrl) {
                 const base64Data = entry.imageUrl.split(',')[1];
-                imagesFolder.file(`scene_${imageCounter++}.jpg`, base64Data, { base64: true });
+                imagesFolder.file(`scene_${sceneCounter++}.jpg`, base64Data, { base64: true });
             }
         }
     }
@@ -293,7 +323,7 @@ export const useStore = create<AppState>((set, get) => ({
     const maxWidth = doc.internal.pageSize.width - margin * 2;
 
     doc.setFont('helvetica', 'bold');
-    doc.text(`Veritas Saga: ${character.name}'s Story`, margin, y);
+    doc.text(`Veritas Saga`, margin, y);
     y += 10;
     
     doc.setFont('helvetica', 'normal');
@@ -323,4 +353,14 @@ export const useStore = create<AppState>((set, get) => ({
     saveAs(content, 'veritas-saga.zip');
     set(state => ({ gameState: { ...state.gameState, isLoading: false } }));
   },
+
+  restartGame: () => {
+    set({
+      character: INITIAL_CHARACTER_STATE,
+      world: INITIAL_WORLD_STATE,
+      gameState: INITIAL_GAME_STATE,
+      settings: INITIAL_SETTINGS_STATE,
+      imagePrompts: [],
+    });
+  }
 }));

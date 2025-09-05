@@ -6,6 +6,7 @@ export const INITIAL_CHARACTER_STATE: Character = {
   skills: [],
   inventory: [],
   status: 'Ready for adventure.',
+  imageUrlHistory: [],
 };
 
 export const INITIAL_WORLD_STATE: WorldState = {

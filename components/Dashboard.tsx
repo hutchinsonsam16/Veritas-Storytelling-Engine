@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { UserCircleIcon, GlobeIcon, UsersIcon } from './Icons';
+import { UserCircleIcon, GlobeIcon, UsersIcon, CollectionIcon } from './Icons';
 import { useStore } from '../store';
 
-type DashboardTab = 'character' | 'world' | 'npcs';
+type DashboardTab = 'character' | 'world' | 'npcs' | 'progression';
 
 const TabButton = ({ isActive, onClick, children }: { isActive: boolean; onClick: () => void; children: React.ReactNode }) => (
   <button
@@ -27,8 +27,16 @@ export const Dashboard = () => {
       case 'character':
         return (
           <div className="p-4 space-y-4">
-            <h3 className="text-xl font-bold text-cyan-300">{character.name}</h3>
-            {character.imageUrl && <img src={character.imageUrl} alt={character.name} className="rounded-lg shadow-lg" />}
+            <div className="flex items-center gap-4">
+              {character.imageUrl ? (
+                 <img src={character.imageUrl} alt={character.name} className="w-24 h-24 rounded-full shadow-lg object-cover border-2 border-slate-600" />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-slate-700 flex items-center justify-center">
+                  <UserCircleIcon className="w-16 h-16 text-slate-500" />
+                </div>
+              )}
+              <h3 className="text-2xl font-bold text-cyan-300">{character.name}</h3>
+            </div>
             
             <div>
               <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Current Status</h4>
@@ -42,27 +50,29 @@ export const Dashboard = () => {
               <p className="text-sm text-gray-300">{character.backstory}</p>
             </div>
 
-            <div>
-              <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Skills</h4>
-              <ul className="space-y-1 text-sm">
-                {character.skills.length > 0 ? character.skills.map(skill => (
-                  <li key={skill.name} className="flex justify-between">
-                    <span>{skill.name}</span>
-                    <span className="font-mono text-cyan-400">{skill.value}</span>
-                  </li>
-                )) : <li className="text-gray-500">No skills defined.</li>}
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Inventory</h4>
-              <ul className="space-y-2 text-sm">
-                {character.inventory.length > 0 ? character.inventory.map(item => (
-                  <li key={item.name}>
-                    <p className="font-semibold text-gray-300">{item.name}</p>
-                    <p className="text-xs text-gray-400 pl-2">{item.description}</p>
-                  </li>
-                )) : <li className="text-gray-500">Inventory is empty.</li>}
-              </ul>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Skills</h4>
+                <ul className="space-y-1 text-sm">
+                  {character.skills.length > 0 ? character.skills.map(skill => (
+                    <li key={skill.name} className="flex justify-between">
+                      <span>{skill.name}</span>
+                      <span className="font-mono text-cyan-400">{skill.value}</span>
+                    </li>
+                  )) : <li className="text-gray-500">No skills defined.</li>}
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Inventory</h4>
+                <ul className="space-y-2 text-sm">
+                  {character.inventory.length > 0 ? character.inventory.map(item => (
+                    <li key={item.name}>
+                      <p className="font-semibold text-gray-300">{item.name}</p>
+                      <p className="text-xs text-gray-400 pl-2">{item.description}</p>
+                    </li>
+                  )) : <li className="text-gray-500">Inventory is empty.</li>}
+                </ul>
+              </div>
             </div>
           </div>
         );
@@ -74,7 +84,6 @@ export const Dashboard = () => {
               {Object.entries(world.lore).map(([key, value]) => (
                 <li key={key}>
                   <p className="font-semibold text-gray-300">{key}</p>
-                  {/* FIX: The `value` from `Object.entries` is inferred as `unknown`. Explicitly converting it to a string ensures type safety for rendering. */}
                   <p className="text-xs text-gray-400 pl-2">{String(value)}</p>
                 </li>
               ))}
@@ -95,6 +104,27 @@ export const Dashboard = () => {
             </ul>
           </div>
         );
+      case 'progression':
+          const allImages = [character.imageUrl, ...character.imageUrlHistory].filter(Boolean) as string[];
+          return (
+            <div className="p-4">
+              <h3 className="text-xl font-bold text-cyan-300 mb-4">Character Progression</h3>
+              {allImages.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {allImages.map((url, index) => (
+                    <div key={index} className="relative aspect-w-3 aspect-h-4">
+                      <img src={url} alt={`Character portrait ${index + 1}`} className="rounded-md object-cover w-full h-full shadow-md" />
+                      <div className="absolute bottom-0 left-0 bg-black/50 text-white text-xs px-1 rounded-tr-md">
+                        {index === 0 ? 'Current' : `-${index}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">No character images have been generated yet.</p>
+              )}
+            </div>
+          );
     }
   };
 
@@ -103,6 +133,9 @@ export const Dashboard = () => {
       <div className="flex border-b border-slate-700">
         <TabButton isActive={activeTab === 'character'} onClick={() => setActiveTab('character')}>
             <UserCircleIcon className="w-5 h-5 mx-auto"/>
+        </TabButton>
+         <TabButton isActive={activeTab === 'progression'} onClick={() => setActiveTab('progression')}>
+            <CollectionIcon className="w-5 h-5 mx-auto"/>
         </TabButton>
         <TabButton isActive={activeTab === 'world'} onClick={() => setActiveTab('world')}>
             <GlobeIcon className="w-5 h-5 mx-auto"/>

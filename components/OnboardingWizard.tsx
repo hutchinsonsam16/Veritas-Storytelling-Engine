@@ -15,7 +15,8 @@ export const OnboardingWizard = () => {
 
   const [step, setStep] = useState<Step>('welcome');
   const [world, setWorld] = useState<WorldState>({ lore: { Genre: "Epic Fantasy", "Core Concept": "A realm of high fantasy teetering on the edge of an industrial revolution, where magic clashes with technology." }, npcs: [] });
-  const [character, setCharacter] = useState<Character>({ name: "Aella", backstory: "A former royal guard, exiled after a political conspiracy.", skills: [{name: "Swordsmanship", value: 75}, {name: "Perception", value: 60}], inventory: [{name: "Steel Longsword", description: "A well-balanced and reliable blade."}] });
+  // FIX: Added missing 'imageUrlHistory' property to the initial character state to match the 'Character' type.
+  const [character, setCharacter] = useState<Character>({ name: "Aella", backstory: "A former royal guard, exiled after a political conspiracy.", skills: [{name: "Swordsmanship", value: 75}, {name: "Perception", value: 60}], inventory: [{name: "Steel Longsword", description: "A well-balanced and reliable blade."}], imageUrlHistory: [] });
   const [openingPrompt, setOpeningPrompt] = useState<string>("Describe my character, Aella, waking up in a damp, moss-covered cave with no memory of how she arrived. The only light comes from glowing fungi on the walls.");
 
   const handleWorldChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {

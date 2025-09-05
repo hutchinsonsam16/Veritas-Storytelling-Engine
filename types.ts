@@ -16,6 +16,7 @@ export interface Character {
   inventory: Item[];
   imageUrl?: string;
   status?: string;
+  imageUrlHistory: string[];
 }
 
 export interface NPC {
