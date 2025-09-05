@@ -6,42 +6,160 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Veritas Storytelling Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style id="theme-style">
+      /* This will be populated by the theming engine */
+    </style>
     <style>
+      :root {
+        /* Base styles */
+        --radius: 0.5rem;
+      }
+      html, body {
+        color-scheme: dark;
+      }
+      html {
+        font-size: var(--font-scale, 1) * 16px;
+      }
+      body {
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-family: var(--font-sans);
+        background-image: var(--bg-image);
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+      }
+      .font-sans { font-family: var(--font-sans); }
+      .font-serif { font-family: var(--font-serif); }
+      .font-mono { font-family: var(--font-mono); }
+
+      .disable-animations *,
+      .disable-animations *::before,
+      .disable-animations *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+
       /* Custom scrollbar for a more thematic feel */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
       }
       ::-webkit-scrollbar-track {
-        background: #1a1a1a;
+        background: hsl(var(--secondary));
       }
       ::-webkit-scrollbar-thumb {
-        background: #4a4a4a;
+        background: hsl(var(--muted-foreground));
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #6a6a6a;
-      }
-      .story-entry-bg {
-        background-color: rgba(30, 41, 59, 0.5); /* slate-800 with 50% opacity */
+        background: hsl(var(--accent-foreground));
       }
     </style>
-  <script type="importmap">
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+                serif: ['Playfair Display', 'serif'],
+                mono: ['Share Tech Mono', 'monospace'],
+            },
+            colors: {
+              border: "hsl(var(--border))",
+              input: "hsl(var(--input))",
+              ring: "hsl(var(--ring))",
+              background: "hsl(var(--background))",
+              foreground: "hsl(var(--foreground))",
+              primary: {
+                DEFAULT: "hsl(var(--primary))",
+                foreground: "hsl(var(--primary-foreground))",
+              },
+              secondary: {
+                DEFAULT: "hsl(var(--secondary))",
+                foreground: "hsl(var(--secondary-foreground))",
+              },
+              destructive: {
+                DEFAULT: "hsl(var(--destructive))",
+                foreground: "hsl(var(--destructive-foreground))",
+              },
+              muted: {
+                DEFAULT: "hsl(var(--muted))",
+                foreground: "hsl(var(--muted-foreground))",
+              },
+              accent: {
+                DEFAULT: "hsl(var(--accent))",
+                foreground: "hsl(var(--accent-foreground))",
+              },
+              popover: {
+                DEFAULT: "hsl(var(--popover))",
+                foreground: "hsl(var(--popover-foreground))",
+              },
+              card: {
+                DEFAULT: "hsl(var(--card))",
+                foreground: "hsl(var(--card-foreground))",
+              },
+            },
+            borderRadius: {
+              lg: "var(--radius)",
+              md: "calc(var(--radius) - 2px)",
+              sm: "calc(var(--radius) - 4px)",
+            },
+            keyframes: {
+              "accordion-down": {
+                from: { height: 0 },
+                to: { height: "var(--radix-accordion-content-height)" },
+              },
+              "accordion-up": {
+                from: { height: "var(--radix-accordion-content-height)" },
+                to: { height: 0 },
+              },
+              "collapsible-down": {
+                from: { height: 0 },
+                to: { height: 'var(--radix-collapsible-content-height)' },
+              },
+              "collapsible-up": {
+                from: { height: 'var(--radix-collapsible-content-height)' },
+                to: { height: 0 },
+              },
+            },
+            animation: {
+              "accordion-down": "accordion-down 0.2s ease-out",
+              "accordion-up": "accordion-up 0.2s ease-out",
+              "collapsible-down": "collapsible-down 0.2s ease-out",
+              "collapsible-up": "collapsible-up 0.2s ease-out",
+            },
+          },
+        },
+      }
+    </script>
+    <script type="importmap">
 {
   "imports": {
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
     "react": "https://aistudiocdn.com/react@^19.1.1",
     "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+    "@xenova/transformers": "https://aistudiocdn.com/@xenova/transformers@2.17.1",
     "zustand": "https://aistudiocdn.com/zustand@^4.5.4",
     "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
     "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
-    "file-saver": "https://aistudiocdn.com/file-saver@2.0.5"
+    "file-saver": "https://aistudiocdn.com/file-saver@2.0.5",
+    "clsx": "https://aistudiocdn.com/clsx@^2.1.1",
+    "tailwind-merge": "https://aistudiocdn.com/tailwind-merge@^3.3.1",
+    "buffer": "https://aistudiocdn.com/buffer@^6.0.3",
+    "long": "https://aistudiocdn.com/long@^5.2.3"
   }
 }
 </script>
-</head>
-  <body class="bg-slate-900 text-gray-200 font-sans">
+  </head>
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

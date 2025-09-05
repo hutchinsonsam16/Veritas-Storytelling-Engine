@@ -47,10 +47,40 @@ export enum GamePhase {
 }
 
 export type ImageGenerationMode = 'none' | 'character' | 'scene' | 'both';
+export type TextEngine = 'gemini' | 'local';
+export type ImageEngine = 'gemini' | 'local-performance' | 'local-quality';
+
+export type Theme = 'veritas' | 'sci-fi' | 'fantasy' | 'high-contrast';
+
+export type PanelId = 'character' | 'narrative' | 'context';
+export interface PanelLayout {
+    order: PanelId[];
+    sizes: number[];
+}
+
+export interface ComponentVisibility {
+    characterPortrait: boolean;
+    characterStatus: boolean;
+    characterSkills: boolean;
+    characterInventory: boolean;
+    characterBackstory: boolean;
+    characterProgression: boolean;
+}
 
 export interface Settings {
+    // Engine
     imageGenerationMode: ImageGenerationMode;
     imageTheme: string;
+    textEngine: TextEngine;
+    imageEngine: ImageEngine;
+    // UI & Theme
+    theme: Theme;
+    // Accessibility
+    fontScale: number;
+    disableAnimations: boolean;
+    // Layout
+    layout: PanelLayout;
+    componentVisibility: ComponentVisibility;
 }
 
 export interface GameState {

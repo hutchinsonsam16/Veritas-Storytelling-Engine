@@ -1,4 +1,6 @@
 
+
+
 import { GoogleGenAI } from "@google/genai";
 import { Character, WorldState, TimelineEvent } from '../types';
 import { DIRECTOR_SYSTEM_PROMPT } from '../constants';
@@ -60,6 +62,7 @@ export async function getAIDrivenTurn(
         systemInstruction: DIRECTOR_SYSTEM_PROMPT,
       }
     });
+    // FIX: The response from `generateContent` has a `text` property which should be returned.
     return response.text;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
