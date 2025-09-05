@@ -8,11 +8,13 @@ import {
   Settings,
   NPC,
 } from './types';
-import { INITIAL_CHARACTER_STATE, INITIAL_WORLD_STATE, INITIAL_GAME_STATE, INITIAL_SETTINGS_STATE } from './constants';
+import { INITIAL_CHARACTER_STATE, INITIAL_WORLD_STATE, INITIAL_GAME_STATE, INITIAL_SETTINGS_STATE, INITIAL_COMPONENT_VISIBILITY } from './constants';
 import { getAIDrivenTurn, generateImage } from './services/geminiService';
+import { getLocalAIDrivenTurn, generateLocalImage, initializeLocalModel, initializeLocalImageModel as initLocalImageModelService } from './services/localGenerationService';
 import JSZip from 'jszip';
 import { jsPDF } from 'jspdf';
 import saveAs from 'file-saver';
+import { toast } from './hooks/use-toast';
 
 
 interface AppState {
@@ -21,13 +23,20 @@ interface AppState {
   gameState: GameState;
   settings: Settings;
   imagePrompts: string[];
+  localModelStatus: { loading: boolean; progress: number; message: string; loaded: boolean };
+  localImageModelStatus: {
+    [key in 'performance' | 'quality']: { loading: boolean; progress: number; message: string; loaded: boolean };
+  };
   
+  initializeLocalModel: () => Promise<void>;
+  initializeLocalImageModel: (mode: 'performance' | 'quality') => Promise<void>;
   handleOnboardingComplete: (character: Character, world: WorldState, openingPrompt: string) => void;
   handlePlayerAction: (action: string) => Promise<void>;
   updateSettings: (newSettings: Partial<Settings>) => void;
   saveGame: () => void;
   loadGame: (json: string) => void;
   exportGame: () => Promise<void>;
+  restartGame: () => void;
 }
 
 const parseAndApplyTags = async (
@@ -53,13 +62,23 @@ const parseAndApplyTags = async (
         case 'img-prompt':
           if (settings.imageGenerationMode === 'scene' || settings.imageGenerationMode === 'both') {
             set(state => ({ imagePrompts: [...state.imagePrompts, content] }));
-            imagePromise = generateImage(content, settings.imageTheme);
+            if (settings.imageEngine === 'local-performance' || settings.imageEngine === 'local-quality') {
+                const mode = settings.imageEngine.replace('local-', '') as 'performance' | 'quality';
+                imagePromise = generateLocalImage(content, settings.imageTheme, mode);
+            } else if (settings.imageEngine === 'gemini') {
+                imagePromise = generateImage(content, settings.imageTheme, '4:3');
+            }
           }
           break;
         case 'char-img-prompt':
           if (settings.imageGenerationMode === 'character' || settings.imageGenerationMode === 'both') {
             set(state => ({ imagePrompts: [...state.imagePrompts, content] }));
-            charImagePromise = generateImage(content, settings.imageTheme);
+            if (settings.imageEngine === 'local-performance' || settings.imageEngine === 'local-quality') {
+                const mode = settings.imageEngine.replace('local-', '') as 'performance' | 'quality';
+                charImagePromise = generateLocalImage(content, settings.imageTheme, mode);
+            } else if (settings.imageEngine === 'gemini') {
+                charImagePromise = generateImage(content, settings.imageTheme, '3:4');
+            }
           }
           break;
         case 'update-status':
@@ -139,23 +158,32 @@ const parseAndApplyTags = async (
       }
     }
 
-    // Automatically generate a character image on state change if one wasn't explicitly provided.
     if (characterStateChanged && !charImagePromise && (settings.imageGenerationMode === 'character' || settings.imageGenerationMode === 'both')) {
       const updatedCharacter = get().character;
-      // Construct a detailed prompt for the new image
       const skillsString = updatedCharacter.skills.map(s => s.name).join(', ') || 'no defined skills';
       const inventoryString = updatedCharacter.inventory.map(i => i.name).join(', ') || 'nothing';
       const autoPrompt = `A portrait of ${updatedCharacter.name}. Backstory: ${updatedCharacter.backstory}. They are skilled in ${skillsString}. They are currently carrying: ${inventoryString}.`;
       
       set(state => ({ imagePrompts: [...state.imagePrompts, autoPrompt] }));
-      charImagePromise = generateImage(autoPrompt, settings.imageTheme);
+       if (settings.imageEngine === 'local-performance' || settings.imageEngine === 'local-quality') {
+          const mode = settings.imageEngine.replace('local-', '') as 'performance' | 'quality';
+          charImagePromise = generateLocalImage(autoPrompt, settings.imageTheme, mode);
+       } else if (settings.imageEngine === 'gemini') {
+          charImagePromise = generateImage(autoPrompt, settings.imageTheme, '3:4');
+       }
     }
     
     const imageUrl = await imagePromise;
     const charImageUrl = await charImagePromise;
 
     if (charImageUrl) {
-        set(state => ({ character: { ...state.character, imageUrl: charImageUrl } }));
+        set(state => {
+            const history = [...(state.character.imageUrlHistory || [])];
+            if (state.character.imageUrl) {
+                history.unshift(state.character.imageUrl); // Add previous image to start of history
+            }
+            return { character: { ...state.character, imageUrl: charImageUrl, imageUrlHistory: history.slice(0, 9) } }; // Limit history
+        });
     }
 
     const newNarrativeEntry: StoryEntry = {
@@ -180,16 +208,131 @@ const parseAndApplyTags = async (
 
 const SAVABLE_STATE_KEYS: (keyof AppState)[] = ['character', 'world', 'gameState', 'settings', 'imagePrompts'];
 
+/**
+ * Migrates a loaded save state to the latest data structure, ensuring backward compatibility.
+ */
+function migrateSaveState(loadedState: any): Partial<AppState> {
+    const character = { ...INITIAL_CHARACTER_STATE, ...loadedState.character };
+    if (!character.imageUrlHistory) {
+        character.imageUrlHistory = [];
+    }
+
+    const world = { ...INITIAL_WORLD_STATE, ...loadedState.world };
+    if (world.npcs) {
+        world.npcs = world.npcs.map((npc: any) => ({
+            relationship: 0, // Ensure relationship exists
+            ...npc,
+        }));
+    }
+
+    const gameState = { 
+        ...INITIAL_GAME_STATE, 
+        ...loadedState.gameState, 
+        phase: GamePhase.PLAYING, 
+        isLoading: false 
+    };
+    
+    // Safely merge settings, especially nested objects
+    const settings = { 
+        ...INITIAL_SETTINGS_STATE, 
+        ...loadedState.settings,
+        layout: {
+            ...INITIAL_SETTINGS_STATE.layout,
+            ...(loadedState.settings?.layout || {}),
+        },
+        componentVisibility: {
+            ...INITIAL_COMPONENT_VISIBILITY,
+            ...(loadedState.settings?.componentVisibility || {}),
+        }
+    };
+    if ((settings as any).localImageApiUrl) {
+        delete (settings as any).localImageApiUrl;
+    }
+
+    const imagePrompts = loadedState.imagePrompts || [];
+
+    return { character, world, gameState, settings, imagePrompts };
+}
+
+
 export const useStore = create<AppState>((set, get) => ({
   character: INITIAL_CHARACTER_STATE,
   world: INITIAL_WORLD_STATE,
   gameState: INITIAL_GAME_STATE,
   settings: INITIAL_SETTINGS_STATE,
   imagePrompts: [],
+  localModelStatus: { loading: false, progress: 0, message: 'Not loaded', loaded: false },
+  localImageModelStatus: {
+    performance: { loading: false, progress: 0, message: 'Not loaded', loaded: false },
+    quality: { loading: false, progress: 0, message: 'Not loaded', loaded: false },
+  },
+
+  initializeLocalModel: async () => {
+    if (get().localModelStatus.loaded || get().localModelStatus.loading) {
+        return;
+    }
+
+    set({ localModelStatus: { loading: true, progress: 0, message: 'Initializing...', loaded: false }});
+
+    const progress_callback = (progress: any) => {
+        if (progress.status === 'progress') {
+            const percentage = (progress.progress || 0).toFixed(2);
+            set({ localModelStatus: { loading: true, progress: progress.progress, message: `${progress.file} (${percentage}%)`, loaded: false } });
+        } else {
+             set({ localModelStatus: { loading: true, progress: get().localModelStatus.progress, message: progress.status, loaded: false } });
+        }
+    };
+
+    await initializeLocalModel(progress_callback);
+
+    set({ localModelStatus: { loading: false, progress: 100, message: 'Ready', loaded: true } });
+  },
+
+  initializeLocalImageModel: async (mode: 'performance' | 'quality') => {
+    const status = get().localImageModelStatus[mode];
+    if (status.loaded || status.loading) {
+        return;
+    }
+
+    set(state => ({
+        localImageModelStatus: {
+            ...state.localImageModelStatus,
+            [mode]: { loading: true, progress: 0, message: 'Initializing...', loaded: false }
+        }
+    }));
+
+    const progress_callback = (progress: any) => {
+        if (progress.status === 'progress') {
+            const percentage = (progress.progress || 0).toFixed(2);
+            set(state => ({
+                localImageModelStatus: {
+                    ...state.localImageModelStatus,
+                    [mode]: { loading: true, progress: progress.progress, message: `${progress.file} (${percentage}%)`, loaded: false }
+                }
+            }));
+        } else {
+            set(state => ({
+                localImageModelStatus: {
+                    ...state.localImageModelStatus,
+                    [mode]: { loading: true, progress: get().localImageModelStatus[mode].progress, message: progress.status, loaded: false }
+                }
+            }));
+        }
+    };
+
+    await initLocalImageModelService(mode, progress_callback);
+
+    set(state => ({
+        localImageModelStatus: {
+            ...state.localImageModelStatus,
+            [mode]: { loading: false, progress: 100, message: 'Ready', loaded: true }
+        }
+    }));
+  },
 
   handleOnboardingComplete: (initialCharacter, initialWorld, openingPrompt) => {
     set({
-      character: initialCharacter,
+      character: { ...INITIAL_CHARACTER_STATE, ...initialCharacter},
       world: initialWorld,
       gameState: { ...get().gameState, phase: GamePhase.PLAYING }
     });
@@ -206,10 +349,34 @@ export const useStore = create<AppState>((set, get) => ({
     };
     set(state => ({ gameState: { ...state.gameState, storyLog: [...state.gameState.storyLog, playerEntry] } }));
 
-    const { character, world, gameState } = get();
-    const aiResponse = await getAIDrivenTurn(character, world, gameState.timeline, action);
-    
-    await parseAndApplyTags(aiResponse, set, get);
+    const { character, world, gameState, settings } = get();
+
+    let aiResponse: string;
+
+    try {
+        if (settings.textEngine === 'local') {
+            await get().initializeLocalModel();
+            aiResponse = await getLocalAIDrivenTurn(character, world, gameState.timeline, action);
+        } else {
+            aiResponse = await getAIDrivenTurn(character, world, gameState.timeline, action);
+        }
+        
+        // Pre-load local image model if selected, but don't wait for it
+        if (settings.imageEngine === 'local-performance' || settings.imageEngine === 'local-quality') {
+            const mode = settings.imageEngine.replace('local-', '') as 'performance' | 'quality';
+            get().initializeLocalImageModel(mode);
+        }
+        
+        await parseAndApplyTags(aiResponse, set, get);
+    } catch (error) {
+        console.error("Error during AI turn:", error);
+        toast({
+            title: "AI Error",
+            description: "The connection to the storytelling engine failed.",
+            variant: "destructive"
+        })
+    }
+
 
     set(state => ({ gameState: { ...state.gameState, isLoading: false } }));
   },
@@ -221,9 +388,6 @@ export const useStore = create<AppState>((set, get) => ({
   saveGame: () => {
     const state = get();
     const stateToSave: Partial<AppState> = {};
-    // FIX: The original `reduce` caused a TypeScript error due to difficulty in correlating
-    // the key with its corresponding value type in a generic way. Using `forEach` and a cast
-    // to `any` resolves this complex type issue while achieving the same result.
     SAVABLE_STATE_KEYS.forEach(key => {
         (stateToSave as any)[key] = state[key];
     });
@@ -231,96 +395,116 @@ export const useStore = create<AppState>((set, get) => ({
     const json = JSON.stringify(stateToSave, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     saveAs(blob, `veritas-save-${Date.now()}.json`);
+    toast({ title: "Game Saved", description: "Your progress has been saved locally.", variant: "default" });
   },
 
   loadGame: (json) => {
-    const loadedState = JSON.parse(json);
-    set({
-      ...INITIAL_GAME_STATE, // ensure all fields are present
-      ...INITIAL_CHARACTER_STATE,
-      ...INITIAL_WORLD_STATE,
-      ...INITIAL_SETTINGS_STATE,
-      ...loadedState,
-      gameState: {
-        ...INITIAL_GAME_STATE,
-        ...loadedState.gameState,
-        phase: GamePhase.PLAYING,
-        isLoading: false,
-      }
-    });
+    try {
+        const loadedState = JSON.parse(json);
+        set(migrateSaveState(loadedState));
+        toast({ title: "Game Loaded", description: "Your adventure continues.", variant: "default" });
+    } catch(e) {
+        console.error("Failed to load save file:", e);
+        toast({
+            title: "Load Failed",
+            description: "The save file might be corrupted.",
+            variant: "destructive"
+        });
+    }
   },
 
   exportGame: async () => {
     set(state => ({ gameState: { ...state.gameState, isLoading: true } }));
+    toast({ title: "Exporting Saga", description: "Please wait while your files are being prepared...", variant: "default" });
     const { character, gameState, imagePrompts } = get();
     const zip = new JSZip();
 
-    // 1. Add save.json
-    const state = get();
-    const stateToSave: Partial<AppState> = {};
-    // FIX: The original `reduce` caused a TypeScript error due to difficulty in correlating
-    // the key with its corresponding value type in a generic way. Using `forEach` and a cast
-    // to `any` resolves this complex type issue while achieving the same result.
-    SAVABLE_STATE_KEYS.forEach(key => {
-        (stateToSave as any)[key] = state[key];
-    });
-    zip.file('save.json', JSON.stringify(stateToSave, null, 2));
+    try {
+        // 1. Add save.json
+        const state = get();
+        const stateToSave: Partial<AppState> = {};
+        SAVABLE_STATE_KEYS.forEach(key => {
+            (stateToSave as any)[key] = state[key];
+        });
+        zip.file('save.json', JSON.stringify(stateToSave, null, 2));
 
-    // 2. Add prompts.txt
-    zip.file('prompts.txt', imagePrompts.join('\n\n'));
+        // 2. Add prompts.txt
+        zip.file('prompts.txt', imagePrompts.join('\n\n'));
 
-    // 3. Add images
-    const imagesFolder = zip.folder('images');
-    if(imagesFolder) {
-        let imageCounter = 0;
-        if (character.imageUrl) {
-            const base64Data = character.imageUrl.split(',')[1];
-            imagesFolder.file('character.jpg', base64Data, { base64: true });
-        }
-        for (const entry of gameState.storyLog) {
-            if (entry.imageUrl) {
-                const base64Data = entry.imageUrl.split(',')[1];
-                imagesFolder.file(`scene_${imageCounter++}.jpg`, base64Data, { base64: true });
+        // 3. Add images
+        const imagesFolder = zip.folder('images');
+        if(imagesFolder) {
+            let sceneCounter = 0;
+            if (character.imageUrl) {
+                const base64Data = character.imageUrl.split(',')[1];
+                imagesFolder.file('character_current.jpg', base64Data, { base64: true });
+            }
+            (character.imageUrlHistory || []).forEach((url, index) => {
+                const base64Data = url.split(',')[1];
+                imagesFolder.file(`character_history_${index}.jpg`, base64Data, { base64: true });
+            });
+            for (const entry of gameState.storyLog) {
+                if (entry.imageUrl) {
+                    const base64Data = entry.imageUrl.split(',')[1];
+                    imagesFolder.file(`scene_${sceneCounter++}.jpg`, base64Data, { base64: true });
+                }
             }
         }
-    }
-    
-    // 4. Create and add PDF
-    const doc = new jsPDF();
-    let y = 15;
-    const pageHeight = doc.internal.pageSize.height;
-    const margin = 10;
-    const maxWidth = doc.internal.pageSize.width - margin * 2;
+        
+        // 4. Create and add PDF
+        const doc = new jsPDF();
+        let y = 15;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 10;
+        const maxWidth = doc.internal.pageSize.width - margin * 2;
 
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Veritas Saga: ${character.name}'s Story`, margin, y);
-    y += 10;
-    
-    doc.setFont('helvetica', 'normal');
-    for (const entry of gameState.storyLog) {
-      if (y > pageHeight - 20) {
-        doc.addPage();
-        y = margin;
-      }
-      doc.setFont('helvetica', entry.type === 'player' ? 'bold' : 'normal');
-      const prefix = entry.type === 'player' ? `> ` : '';
-      const lines = doc.splitTextToSize(`${prefix}${entry.text}`, maxWidth);
-      
-      for(const line of lines){
-         if (y > pageHeight - 10) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Veritas Saga`, margin, y);
+        y += 10;
+        
+        doc.setFont('helvetica', 'normal');
+        for (const entry of gameState.storyLog) {
+        if (y > pageHeight - 20) {
             doc.addPage();
             y = margin;
-         }
-         doc.text(line, margin, y);
-         y+= 7;
-      }
-      y += 5; // Extra space between entries
-    }
-    zip.file('story.pdf', doc.output('blob'));
+        }
+        doc.setFont('helvetica', entry.type === 'player' ? 'bold' : 'normal');
+        const prefix = entry.type === 'player' ? `> ` : '';
+        const lines = doc.splitTextToSize(`${prefix}${entry.text}`, maxWidth);
+        
+        for(const line of lines){
+            if (y > pageHeight - 10) {
+                doc.addPage();
+                y = margin;
+            }
+            doc.text(line, margin, y);
+            y+= 7;
+        }
+        y += 5; // Extra space between entries
+        }
+        zip.file('story.pdf', doc.output('blob'));
 
-    // 5. Generate and download zip
-    const content = await zip.generateAsync({ type: 'blob' });
-    saveAs(content, 'veritas-saga.zip');
-    set(state => ({ gameState: { ...state.gameState, isLoading: false } }));
+        // 5. Generate and download zip
+        const content = await zip.generateAsync({ type: 'blob' });
+        saveAs(content, 'veritas-saga.zip');
+        toast({ title: "Export Complete", description: "Your saga has been downloaded as a zip file.", variant: "default" });
+
+    } catch (error) {
+        console.error("Failed to export game:", error);
+        toast({ title: "Export Failed", description: "An error occurred while creating the export file.", variant: "destructive" });
+    } finally {
+        set(state => ({ gameState: { ...state.gameState, isLoading: false } }));
+    }
   },
+
+  restartGame: () => {
+    set({
+      character: INITIAL_CHARACTER_STATE,
+      world: INITIAL_WORLD_STATE,
+      gameState: INITIAL_GAME_STATE,
+      settings: INITIAL_SETTINGS_STATE,
+      imagePrompts: [],
+      localModelStatus: { loading: false, progress: 0, message: 'Not loaded', loaded: false },
+    });
+  }
 }));

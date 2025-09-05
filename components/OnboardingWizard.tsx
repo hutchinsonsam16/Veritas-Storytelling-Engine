@@ -2,6 +2,11 @@ import React, { useState, useRef } from 'react';
 import type { Character, WorldState } from '../types';
 import { SparklesIcon, UploadIcon } from './Icons';
 import { useStore } from '../store';
+import { Button } from './ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
 
 type Step = 'welcome' | 'world' | 'character' | 'opening';
 
@@ -15,7 +20,7 @@ export const OnboardingWizard = () => {
 
   const [step, setStep] = useState<Step>('welcome');
   const [world, setWorld] = useState<WorldState>({ lore: { Genre: "Epic Fantasy", "Core Concept": "A realm of high fantasy teetering on the edge of an industrial revolution, where magic clashes with technology." }, npcs: [] });
-  const [character, setCharacter] = useState<Character>({ name: "Aella", backstory: "A former royal guard, exiled after a political conspiracy.", skills: [{name: "Swordsmanship", value: 75}, {name: "Perception", value: 60}], inventory: [{name: "Steel Longsword", description: "A well-balanced and reliable blade."}] });
+  const [character, setCharacter] = useState<Character>({ name: "Aella", backstory: "A former royal guard, exiled after a political conspiracy.", skills: [{name: "Swordsmanship", value: 75}, {name: "Perception", value: 60}], inventory: [{name: "Steel Longsword", description: "A well-balanced and reliable blade."}], imageUrlHistory: [] });
   const [openingPrompt, setOpeningPrompt] = useState<string>("Describe my character, Aella, waking up in a damp, moss-covered cave with no memory of how she arrived. The only light comes from glowing fungi on the walls.");
 
   const handleWorldChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -45,7 +50,6 @@ export const OnboardingWizard = () => {
           loadGame(json);
         } catch (error) {
           console.error("Failed to load or parse game file:", error);
-          alert("Error: Could not load the save file. It may be corrupted.");
         }
       };
       reader.readAsText(file);
@@ -56,99 +60,107 @@ export const OnboardingWizard = () => {
     switch (step) {
       case 'welcome':
         return (
-          <div className="text-center">
-            <h1 className="text-5xl font-bold text-white mb-2">Veritas</h1>
-            <h2 className="text-2xl text-cyan-300 mb-6">The Unchained Storytelling Engine</h2>
-            <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">You are the author. The world is your canvas. The story is yours to command. There are no limits, no rails, no judgments. Only the narrative you wish to create.</p>
+          <div className="text-center max-w-3xl mx-auto">
+            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 mb-2">Veritas</h1>
+            <h2 className="text-2xl text-primary mb-6">The Unchained Storytelling Engine</h2>
+            <p className="text-lg text-muted-foreground mb-8">You are the author. The world is your canvas. The story is yours to command. There are no limits, no rails, no judgments. Only the narrative you wish to create.</p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button onClick={() => setStep('world')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105 w-full sm:w-auto">
+              <Button size="lg" onClick={() => setStep('world')}>
                 Forge Your Reality
-              </button>
-              <button onClick={handleLoadClick} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2 w-full sm:w-auto">
-                <UploadIcon className="w-6 h-6"/>
-                <span>Load Game</span>
-              </button>
+              </Button>
+              <Button size="lg" variant="secondary" onClick={handleLoadClick}>
+                <UploadIcon className="w-5 h-5 mr-2"/>
+                Load Game
+              </Button>
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
             </div>
           </div>
         );
       case 'world':
         return (
-          <div className="w-full max-w-2xl">
-            <h2 className="text-3xl font-bold text-cyan-300 mb-4">The World Anvil</h2>
-            <p className="text-gray-300 mb-6">Describe the core concept of your world. What is its genre, its mood, its central conflict? Be as brief or as detailed as you desire.</p>
-            <textarea
-              value={world.lore['Core Concept'] || ""}
-              onChange={handleWorldChange}
-              className="w-full h-48 p-4 bg-slate-800 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none resize-none"
-              placeholder="e.g., A cyberpunk dystopia ruled by AI, a magical kingdom hidden in the clouds..."
-            />
-            <div className="flex justify-end mt-6">
-              <button onClick={() => setStep('character')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
-                Next: Create Your Avatar
-              </button>
-            </div>
-          </div>
+          <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle className="text-primary text-3xl">The World Anvil</CardTitle>
+              <CardDescription>Describe the core concept of your world. What is its genre, its mood, its central conflict?</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={world.lore['Core Concept'] || ""}
+                onChange={handleWorldChange}
+                className="h-48 resize-none text-base"
+                placeholder="e.g., A cyberpunk dystopia ruled by AI, a magical kingdom hidden in the clouds..."
+              />
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button onClick={() => setStep('character')}>Next: Create Your Avatar</Button>
+            </CardFooter>
+          </Card>
         );
       case 'character':
         return (
-          <div className="w-full max-w-2xl">
-            <h2 className="text-3xl font-bold text-cyan-300 mb-4">The Character Crucible</h2>
-            <p className="text-gray-300 mb-6">Who are you in this world? Define your protagonist.</p>
-            <div className="space-y-4">
-              <input
-                type="text"
-                name="name"
-                value={character.name}
-                onChange={handleCharacterChange}
-                placeholder="Character Name"
-                className="w-full p-3 bg-slate-800 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none"
-              />
-              <textarea
-                name="backstory"
-                value={character.backstory}
-                onChange={handleCharacterChange}
-                placeholder="Character Backstory"
-                className="w-full h-32 p-3 bg-slate-800 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none resize-none"
-              />
-            </div>
-            <div className="flex justify-between mt-6">
-               <button onClick={() => setStep('world')} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
-                Back to World
-              </button>
-              <button onClick={() => setStep('opening')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
-                Next: The First Scene
-              </button>
-            </div>
-          </div>
+          <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle className="text-primary text-3xl">The Character Crucible</CardTitle>
+              <CardDescription>Who are you in this world? Define your protagonist.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Character Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={character.name}
+                  onChange={handleCharacterChange}
+                  placeholder="e.g., Aella, Jax, Unit-734"
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="backstory">Character Backstory</Label>
+                <Textarea
+                  id="backstory"
+                  name="backstory"
+                  value={character.backstory}
+                  onChange={handleCharacterChange}
+                  placeholder="e.g., A disgraced knight seeking redemption, a rogue AI that escaped its creators..."
+                  className="h-32 resize-none"
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+               <Button variant="secondary" onClick={() => setStep('world')}>Back to World</Button>
+               <Button onClick={() => setStep('opening')}>Next: The First Scene</Button>
+            </CardFooter>
+          </Card>
         );
       case 'opening':
         return (
-          <div className="w-full max-w-2xl">
-            <h2 className="text-3xl font-bold text-cyan-300 mb-4">The Opening Scene</h2>
-            <p className="text-gray-300 mb-6">Describe the very first moment of your story. This will be the initial prompt given to the Storytelling Engine.</p>
-            <textarea
-              value={openingPrompt}
-              onChange={(e) => setOpeningPrompt(e.target.value)}
-              className="w-full h-48 p-4 bg-slate-800 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:outline-none resize-none"
-              placeholder="e.g., Describe my character waking up at the scene of a crime, with no memory of the past 24 hours."
-            />
-            <div className="flex justify-between mt-6">
-                <button onClick={() => setStep('character')} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105">
-                    Back to Character
-                </button>
-                <button onClick={handleStart} className="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105 flex items-center space-x-2">
-                    <SparklesIcon className="w-6 h-6" />
-                    <span>Begin The Saga</span>
-                </button>
-            </div>
-          </div>
+           <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle className="text-primary text-3xl">The Opening Scene</CardTitle>
+              <CardDescription>Describe the very first moment of your story. This will be the initial prompt given to the Storytelling Engine.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={openingPrompt}
+                onChange={(e) => setOpeningPrompt(e.target.value)}
+                className="h-48 resize-none"
+                placeholder="e.g., Describe my character waking up at the scene of a crime, with no memory of the past 24 hours."
+              />
+            </CardContent>
+            <CardFooter className="flex justify-between">
+                <Button variant="secondary" onClick={() => setStep('character')}>Back to Character</Button>
+                <Button size="lg" onClick={handleStart}>
+                    <SparklesIcon className="w-5 h-5 mr-2" />
+                    Begin The Saga
+                </Button>
+            </CardFooter>
+          </Card>
         );
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-slate-900 bg-opacity-80 backdrop-blur-sm">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-background">
       <div className="w-full transition-all duration-500">
         {renderStep()}
       </div>

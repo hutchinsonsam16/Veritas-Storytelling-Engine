@@ -1,11 +1,6 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Character, WorldState, TimelineEvent } from '../types';
 import { DIRECTOR_SYSTEM_PROMPT } from '../constants';
-
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
-}
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -67,7 +62,7 @@ export async function getAIDrivenTurn(
   }
 }
 
-export async function generateImage(prompt: string, theme: string): Promise<string | null> {
+export async function generateImage(prompt: string, theme: string, aspectRatio: '1:1' | '3:4' | '4:3' | '9:16' | '16:9' = '4:3'): Promise<string | null> {
   try {
     const response = await ai.models.generateImages({
         model: generateImageModel,
@@ -75,7 +70,7 @@ export async function generateImage(prompt: string, theme: string): Promise<stri
         config: {
           numberOfImages: 1,
           outputMimeType: 'image/jpeg',
-          aspectRatio: '16:9',
+          aspectRatio: aspectRatio,
         },
     });
     
