@@ -1,14 +1,34 @@
 
+<<<<<<< HEAD
 import { pipeline } from '@xenova/transformers';
+=======
+
+
+// FIX: Replaced the generic `Pipeline` type with `TextGenerationPipeline`. The pipeline
+// for 'text-generation' returns a specific type that is not compatible with the generic one.
+// FIX: Imported `TextToImagePipeline` which makes the 'text-to-image' task available to the pipeline factory.
+// FIX: The type `TextToImagePipeline` is not consistently exported in all versions or environments of `@xenova/transformers`. To resolve the resulting compilation errors, I have removed the explicit type and am using `any` to avoid breaking the application due to external type definition issues. This makes the code more resilient to inconsistencies in the library's typings.
+// FIX: Added TextToImagePipeline to imports to register the 'text-to-image' pipeline.
+// FIX: Removed `TextToImagePipeline` from import as it is not an exported member of `@xenova/transformers` in the current setup, causing a compilation error.
+import { pipeline, TextGenerationPipeline } from '@xenova/transformers';
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
 import { Character, WorldState, TimelineEvent } from '../types';
 
 // Singleton to manage the local text generation model
 class LocalLLMManager {
+<<<<<<< HEAD
   static instance: any | null = null;
   static loadingPromise: Promise<any> | null = null;
   static modelId = 'Xenova/phi-3-mini-4k-instruct';
 
   static async getInstance(progress_callback?: (progress: any) => void): Promise<any> {
+=======
+  static instance: TextGenerationPipeline | null = null;
+  static loadingPromise: Promise<TextGenerationPipeline> | null = null;
+  static modelId = 'Xenova/phi-3-mini-4k-instruct';
+
+  static async getInstance(progress_callback?: (progress: any) => void): Promise<TextGenerationPipeline> {
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
     if (this.instance) {
       return this.instance;
     }
@@ -43,9 +63,18 @@ class LocalImageModelManager {
     }
 
     if (!this.loadingPromises[mode]) {
+<<<<<<< HEAD
       this.loadingPromises[mode] = pipeline('text-to-image' as any, modelId, { progress_callback });
     }
 
+=======
+      // FIX: Cast 'text-to-image' to `any` to bypass a TypeScript error where this pipeline type is not recognized at compile-time.
+      this.loadingPromises[mode] = pipeline('text-to-image' as any, modelId, { progress_callback });
+    }
+
+    // FIX: Added a non-null assertion `!` because TypeScript cannot infer that
+    // `this.loadingPromises[mode]` is non-null after the `if` block when using stricter types.
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
     this.instances[mode] = await this.loadingPromises[mode]!;
     this.loadingPromises[mode] = null; // Clear promise after loading
     return this.instances[mode];

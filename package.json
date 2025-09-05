@@ -18,7 +18,11 @@
     "buffer": "^6.0.3",
     "clsx": "^2.1.1",
     "file-saver": "2.0.5",
+<<<<<<< HEAD
     "jspdf": "^3.0.2",
+=======
+    "jspdf": "^2.5.1",
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
     "jszip": "^3.10.1",
     "long": "^5.2.3",
     "react": "^19.1.1",
@@ -32,11 +36,19 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+<<<<<<< HEAD
     "electron": "^38.0.0",
     "electron-builder": "^24.13.3",
     "typescript": "^5.5.2",
     "vite": "^7.1.4",
     "vite-plugin-node-polyfills": "^0.24.0"
+=======
+    "electron": "^31.2.1",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.5.2",
+    "vite": "^5.3.1",
+    "vite-plugin-node-polyfills": "^0.22.0"
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
   },
   "build": {
     "appId": "com.veritas.engine",

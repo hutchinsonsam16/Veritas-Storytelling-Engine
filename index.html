@@ -10,6 +10,58 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <style id="theme-style">
       /* This will be populated by the theming engine */
+<<<<<<< HEAD
+=======
+    </style>
+    <style>
+      :root {
+        /* Base styles */
+        --radius: 0.5rem;
+      }
+      html, body {
+        color-scheme: dark;
+      }
+      html {
+        font-size: var(--font-scale, 1) * 16px;
+      }
+      body {
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-family: var(--font-sans);
+        background-image: var(--bg-image);
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+      }
+      .font-sans { font-family: var(--font-sans); }
+      .font-serif { font-family: var(--font-serif); }
+      .font-mono { font-family: var(--font-mono); }
+
+      .disable-animations *,
+      .disable-animations *::before,
+      .disable-animations *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+
+      /* Custom scrollbar for a more thematic feel */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: hsl(var(--secondary));
+      }
+      ::-webkit-scrollbar-thumb {
+        background: hsl(var(--muted-foreground));
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--accent-foreground));
+      }
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
     </style>
     <style>
       :root {
@@ -53,11 +105,15 @@
 <script type="importmap">
 {
   "imports": {
+<<<<<<< HEAD
     "@xenova/transformers": "https://aistudiocdn.com/@xenova/transformers@^2.17.2",
+=======
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
     "react": "https://aistudiocdn.com/react@^19.1.1",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
     "react/": "https://aistudiocdn.com/react@^19.1.1/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+<<<<<<< HEAD
     "zustand": "https://aistudiocdn.com/zustand@^5.0.8",
     "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
     "file-saver": "https://aistudiocdn.com/file-saver@^2.0.5",
@@ -65,6 +121,16 @@
     "tailwind-merge": "https://aistudiocdn.com/tailwind-merge@^3.3.1",
     "electron": "https://aistudiocdn.com/electron@^38.0.0",
     "clsx": "https://aistudiocdn.com/clsx@^2.1.1",
+=======
+    "clsx": "https://aistudiocdn.com/clsx@^2.1.1",
+    "tailwind-merge": "https://aistudiocdn.com/tailwind-merge@^3.3.1",
+    "zustand": "https://aistudiocdn.com/zustand@^5.0.8",
+    "jszip": "https://aistudiocdn.com/jszip@^3.10.1",
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.2",
+    "file-saver": "https://aistudiocdn.com/file-saver@^2.0.5",
+    "@xenova/transformers": "https://aistudiocdn.com/@xenova/transformers@^2.17.2",
+    "electron": "https://aistudiocdn.com/electron@^38.0.0",
+>>>>>>> abd10e7d0e3f946760e79891427c9d4ad551de8c
     "path": "https://aistudiocdn.com/path@^0.12.7",
     "url": "https://aistudiocdn.com/url@^0.11.4",
     "vite": "https://aistudiocdn.com/vite@^7.1.4",
@@ -73,7 +139,6 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
