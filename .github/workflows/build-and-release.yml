@@ -1,0 +1,83 @@
+name: Build & Release
+
+# This workflow is triggered whenever a new release is created on GitHub.
+on:
+  release:
+    types: [created]
+
+jobs:
+  # == JOB 1: BUILD ELECTRON APPS FOR DESKTOP ==
+  build-electron:
+    name: Build Electron App (${{ matrix.os }})
+    # Use a matrix strategy to build for Windows, macOS, and Linux in parallel.
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: 1. Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 3. Install project dependencies
+        run: npm install
+
+      - name: 4. Build the Electron application
+        # This script is defined in your package.json
+        run: npm run electron:build
+        env:
+          # GitHub token is required by electron-builder to draft releases.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 5. Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-build-${{ matrix.os }}
+          # The output directory is configured in package.json
+          path: release/
+
+  # == JOB 2: BUILD ANDROID APP ==
+  build-android:
+    name: Build Android App
+    needs: build-electron # This job runs after the electron jobs complete.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: 3. Setup Java Development Kit (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 4. Install project dependencies
+        run: npm install
+
+      - name: 5. Sync web app with Capacitor Android project
+        # This script is defined in your package.json
+        run: npm run android:sync
+
+      - name: 6. Build the Android App Bundle (AAB)
+        # This command navigates into the android directory and uses Gradle to build the release bundle.
+        run: ./android/gradlew -p ./android bundleRelease
+
+      - name: 7. Upload Android App Bundle as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-app-bundle
+          path: android/app/build/outputs/bundle/release/app-release.aab
