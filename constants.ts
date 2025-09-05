@@ -1,11 +1,11 @@
-
-import { GameState, Character, WorldState, GamePhase } from './types';
+import { GameState, Character, WorldState, GamePhase, Settings } from './types';
 
 export const INITIAL_CHARACTER_STATE: Character = {
   name: '',
   backstory: '',
   skills: [],
   inventory: [],
+  status: 'Ready for adventure.',
 };
 
 export const INITIAL_WORLD_STATE: WorldState = {
@@ -19,6 +19,12 @@ export const INITIAL_GAME_STATE: GameState = {
   storyLog: [],
   timeline: [],
 };
+
+export const INITIAL_SETTINGS_STATE: Settings = {
+    imageGenerationMode: 'both',
+    imageTheme: 'epic fantasy art, digital painting, cinematic lighting',
+};
+
 
 export const DIRECTOR_SYSTEM_PROMPT = `
 --- CORE MANDATE: UNBOUNDED CREATION ---
@@ -37,11 +43,11 @@ You are the Director Agent, orchestrating a team of specialized sub-agents to cr
 --- STATE-CHANGE TAG LANGUAGE (Your Toolkit) ---
 You MUST use these tags to communicate all changes to game state. The application will parse these tags. The narrative text should reflect these changes but should NOT contain the tags themselves.
 
-// FIX: Removed nested backticks (\` \`) from the example tags below. The nested backticks were breaking the template literal syntax, causing numerous parsing errors.
 *   **Scene & Atmosphere:**
     *   [img-prompt]A detailed, vivid description for an image generation model to create a scene visual.[/img-prompt]
 *   **Character & Inventory:**
     *   [char-img-prompt]A detailed description for an image of the main character, reflecting their current state or appearance.[/char-img-prompt]
+    *   [update-status]A short, 1-2 sentence, present-tense summary of the character's current physical and emotional state.[/update-status]
     *   [update-backstory]The full, updated backstory text.[/update-backstory]
     *   [add-item]Item Name|A detailed description of the item.[/add-item]
     *   [remove-item]Item Name[/remove-item]
@@ -54,6 +60,9 @@ You MUST use these tags to communicate all changes to game state. The applicatio
 *   **World Evolution:**
     *   [update-lore]Lore Key|The new content for this lore entry.[/update-lore]
     *   [log-world-event]A significant event description that has occurred.[/log-world-event]
+
+--- GUIDANCE ---
+Be proactive. After every turn, ALWAYS use the [update-status] tag to reflect the character's latest condition. If the character's state changes significantly (e.g., they acquire an important new item, are injured, or undergo a significant emotional shift), you should also reflect this by using the [char-img-prompt] tag to generate a new character portrait that shows this change.
 
 Do not output any other tags. Be creative and proactive in using tags to make the world feel alive. If a player's action would logically result in a skill increase, an item change, or a shift in relationship, USE THE TAGS.
 `;

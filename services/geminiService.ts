@@ -24,6 +24,7 @@ function buildPrompt(
 --- CURRENT STATE ---
 
 **CHARACTER: ${character.name}**
+Status: ${character.status || 'Normal'}
 Backstory: ${character.backstory}
 Skills: ${character.skills.map(s => `${s.name}: ${s.value}`).join(', ') || 'None'}
 Inventory: ${character.inventory.map(i => i.name).join(', ') || 'None'}
@@ -66,11 +67,11 @@ export async function getAIDrivenTurn(
   }
 }
 
-export async function generateImage(prompt: string): Promise<string | null> {
+export async function generateImage(prompt: string, theme: string): Promise<string | null> {
   try {
     const response = await ai.models.generateImages({
         model: generateImageModel,
-        prompt: `epic fantasy art, digital painting, cinematic lighting, ${prompt}`,
+        prompt: `${theme}, ${prompt}`,
         config: {
           numberOfImages: 1,
           outputMimeType: 'image/jpeg',

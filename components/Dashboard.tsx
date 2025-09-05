@@ -29,7 +29,19 @@ export const Dashboard = () => {
           <div className="p-4 space-y-4">
             <h3 className="text-xl font-bold text-cyan-300">{character.name}</h3>
             {character.imageUrl && <img src={character.imageUrl} alt={character.name} className="rounded-lg shadow-lg" />}
-            <p className="text-sm text-gray-300 italic">{character.backstory}</p>
+            
+            <div>
+              <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Current Status</h4>
+              <blockquote className="border-l-4 border-cyan-500 pl-4 py-2 bg-slate-900/50 my-2">
+                <p className="text-sm text-gray-300 italic">{character.status || "Ready for action."}</p>
+              </blockquote>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Backstory</h4>
+              <p className="text-sm text-gray-300">{character.backstory}</p>
+            </div>
+
             <div>
               <h4 className="font-semibold text-gray-200 border-b border-slate-600 pb-1 mb-2">Skills</h4>
               <ul className="space-y-1 text-sm">

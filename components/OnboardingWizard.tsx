@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Character, WorldState } from '../types';
-import { SparklesIcon } from './Icons';
+import { SparklesIcon, UploadIcon } from './Icons';
 import { useStore } from '../store';
 
 type Step = 'welcome' | 'world' | 'character' | 'opening';
 
 export const OnboardingWizard = () => {
-  const handleOnboardingComplete = useStore(state => state.handleOnboardingComplete);
+  const { handleOnboardingComplete, loadGame } = useStore(state => ({
+    handleOnboardingComplete: state.handleOnboardingComplete,
+    loadGame: state.loadGame,
+  }));
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<Step>('welcome');
   const [world, setWorld] = useState<WorldState>({ lore: { Genre: "Epic Fantasy", "Core Concept": "A realm of high fantasy teetering on the edge of an industrial revolution, where magic clashes with technology." }, npcs: [] });
@@ -26,6 +31,27 @@ export const OnboardingWizard = () => {
     handleOnboardingComplete(character, world, openingPrompt);
   };
 
+  const handleLoadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const json = e.target?.result as string;
+          loadGame(json);
+        } catch (error) {
+          console.error("Failed to load or parse game file:", error);
+          alert("Error: Could not load the save file. It may be corrupted.");
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 'welcome':
@@ -34,9 +60,16 @@ export const OnboardingWizard = () => {
             <h1 className="text-5xl font-bold text-white mb-2">Veritas</h1>
             <h2 className="text-2xl text-cyan-300 mb-6">The Unchained Storytelling Engine</h2>
             <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">You are the author. The world is your canvas. The story is yours to command. There are no limits, no rails, no judgments. Only the narrative you wish to create.</p>
-            <button onClick={() => setStep('world')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105">
-              Forge Your Reality
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button onClick={() => setStep('world')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105 w-full sm:w-auto">
+                Forge Your Reality
+              </button>
+              <button onClick={handleLoadClick} className="bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-8 rounded-lg text-lg transition-all transform hover:scale-105 flex items-center justify-center gap-2 w-full sm:w-auto">
+                <UploadIcon className="w-6 h-6"/>
+                <span>Load Game</span>
+              </button>
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
+            </div>
           </div>
         );
       case 'world':

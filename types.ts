@@ -15,6 +15,7 @@ export interface Character {
   skills: Skill[];
   inventory: Item[];
   imageUrl?: string;
+  status?: string;
 }
 
 export interface NPC {
@@ -42,6 +43,13 @@ export interface TimelineEvent {
 export enum GamePhase {
   ONBOARDING = 'ONBOARDING',
   PLAYING = 'PLAYING',
+}
+
+export type ImageGenerationMode = 'none' | 'character' | 'scene' | 'both';
+
+export interface Settings {
+    imageGenerationMode: ImageGenerationMode;
+    imageTheme: string;
 }
 
 export interface GameState {
