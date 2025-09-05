@@ -1,13 +1,6 @@
-
-
-
 import { GoogleGenAI } from "@google/genai";
 import { Character, WorldState, TimelineEvent } from '../types';
 import { DIRECTOR_SYSTEM_PROMPT } from '../constants';
-
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
-}
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -62,7 +55,6 @@ export async function getAIDrivenTurn(
         systemInstruction: DIRECTOR_SYSTEM_PROMPT,
       }
     });
-    // FIX: The response from `generateContent` has a `text` property which should be returned.
     return response.text;
   } catch (error) {
     console.error("Error calling Gemini API:", error);

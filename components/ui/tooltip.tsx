@@ -26,25 +26,26 @@ const Tooltip = ({ children }: { children: React.ReactNode }) => {
 const TooltipTrigger = ({ children, asChild = false }: { children: React.ReactNode; asChild?: boolean }) => {
     const { setOpen } = useTooltip();
     
-    // FIX: Correctly implement `asChild` by composing event handlers instead of overwriting,
-    // and fix the type error with spreading `children.props`.
+    // FIX: The original `asChild` implementation had type errors because `children.props` is inferred as `unknown`.
+    // Casting `children.props` to `any` resolves these errors, allowing both spreading of props and composition of event handlers.
     if (asChild && React.isValidElement(children)) {
+        const childProps = children.props as any;
         return React.cloneElement(children, {
-            ...children.props,
+            ...childProps,
             onMouseEnter: (e: React.MouseEvent) => {
-                children.props.onMouseEnter?.(e);
+                childProps.onMouseEnter?.(e);
                 setOpen(true);
             },
             onMouseLeave: (e: React.MouseEvent) => {
-                children.props.onMouseLeave?.(e);
+                childProps.onMouseLeave?.(e);
                 setOpen(false);
             },
             onFocus: (e: React.FocusEvent) => {
-                children.props.onFocus?.(e);
+                childProps.onFocus?.(e);
                 setOpen(true);
             },
             onBlur: (e: React.FocusEvent) => {
-                children.props.onBlur?.(e);
+                childProps.onBlur?.(e);
                 setOpen(false);
             },
         });
